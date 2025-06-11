@@ -2,24 +2,35 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>License Manager</title>
-  <style>
-    body { font-family: Arial; padding: 20px; }
-    input, button { margin: 5px 0; }
-    ul { list-style: none; padding-left: 0; }
-    li { margin-bottom: 10px; }
-  </style>
+  <script src="https://cdn.tailwindcss.com"></script> 
 </head>
-<body>
-  <h1>License Key Manager</h1>
+<body class="bg-gray-100 text-gray-900">
 
-  <input type="text" id="pluginName" placeholder="Plugin Name (e.g. Bbox)" />
-  <input type="datetime-local" id="expiryDate" />
-  <button onclick="generateKey()">Generate License Key</button>
-  <hr />
+  <div class="max-w-6xl mx-auto p-6">
+    <h1 class="text-3xl font-bold mb-6 text-center">🔑 License Key Manager</h1>
 
-  <h2>License Keys</h2>
-  <ul id="keyList"></ul>
+    <!-- Form to Add New Key -->
+    <div class="bg-white shadow-md rounded-lg p-6 mb-8">
+      <h2 class="text-xl font-semibold mb-4">Generate New License Key</h2>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+        <input id="pluginName" placeholder="Plugin Name (e.g. Bbox)" class="border p-2 rounded" />
+        <input id="expiryDate" type="datetime-local" class="border p-2 rounded" />
+        <button onclick="generateKey()" class="bg-blue-500 hover:bg-blue-600 text-white p-2 rounded">
+          Generate Key
+        </button>
+      </div>
+    </div>
+
+    <!-- Keys List -->
+    <div class="bg-white shadow-md rounded-lg p-6">
+      <h2 class="text-xl font-semibold mb-4">License Keys</h2>
+      <ul id="keyList" class="space-y-4">
+        <!-- Keys will appear here -->
+      </ul>
+    </div>
+  </div>
 
   <script>
     const API_URL = "https://license-server.amensakrx.workers.dev"; 
@@ -33,11 +44,25 @@
 
         keys.forEach(k => {
           const li = document.createElement("li");
+          li.className = "p-4 border rounded-lg flex justify-between items-center";
+
           if (k.data.used) {
-            li.innerHTML = `<strong>${k.key}</strong> → Used by <em>${k.data.used_by.username}</em> on <code>${k.data.used_by.machine_id}</code>`;
+            li.innerHTML = `
+              <div>
+                <strong class="text-red-500">${k.key}</strong><br/>
+                <small>Used by <em>${k.data.used_by.username}</em> on ${k.data.used_by.machine_id}</small><br/>
+                <span class="text-xs text-gray-500">Activated at: ${new Date(k.data.used_by.activated_at).toLocaleString()}</span>
+              </div>
+            `;
           } else {
-            li.innerHTML = `<strong>${k.key}</strong> → <span style="color:green">Unused</span>`;
+            li.innerHTML = `
+              <div>
+                <strong>${k.key}</strong><br/>
+                <small class="text-green-500">Unused</small>
+              </div>
+            `;
           }
+
           list.appendChild(li);
         });
       } catch (err) {
