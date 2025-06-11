@@ -9,50 +9,80 @@
 <body class="bg-gray-100 text-gray-900">
 
   <div class="max-w-6xl mx-auto p-6">
-    <h1 class="text-3xl font-bold mb-6 text-center">🔑 License Key Generator</h1>
+    <h1 class="text-3xl font-bold mb-6 text-center">🔑 License Key Manager</h1>
 
     <!-- Form to Add New Key -->
     <div class="bg-white shadow-md rounded-lg p-6 mb-8">
       <h2 class="text-xl font-semibold mb-4">Generate New License Key</h2>
       <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
         <input id="pluginName" placeholder="Plugin Name (e.g. Bbox)" class="border p-2 rounded" />
-
-        <!-- تاريخ بدون الوقت -->
         <input id="expiryDate" type="date" class="border p-2 rounded" />
-
-        <!-- زر التوليد -->
         <button onclick="generateKey()" class="bg-blue-500 hover:bg-blue-600 text-white p-2 rounded">
           Generate Key
         </button>
       </div>
 
-      <!-- حقل اسم المستخدم -->
       <label class="block mt-4">
         <span class="font-medium">User:</span>
-        <input id="username" value="admin" readonly class="border p-2 rounded w-full bg-gray-100" />
+        <input id="username" value="admin" class="border p-2 rounded w-full bg-gray-100" />
       </label>
     </div>
 
     <!-- Keys List -->
     <div class="bg-white shadow-md rounded-lg p-6">
       <h2 class="text-xl font-semibold mb-4">License Keys</h2>
-      <ul id="keyList" class="space-y-4">
-        <!-- Keys will appear here -->
-      </ul>
+      <table class="min-w-full bg-white border-collapse">
+        <thead>
+          <tr class="bg-gray-200 text-left">
+            <th class="p-3">License Key</th>
+            <th class="p-3">Plugin</th>
+            <th class="p-3">Used By</th>
+            <th class="p-3">Machine ID</th>
+            <th class="p-3">Activated At</th>
+            <th class="p-3">Status</th>
+          </tr>
+        </thead>
+        <tbody id="keyList">
+          <!-- Keys will appear here -->
+        </tbody>
+      </table>
     </div>
   </div>
 
   <script>
     const API_URL = "https://license-server.amensakrx.workers.dev"; 
 
-    // توليد كود عشوائي
-    function generateRandomKey(length = 16) {
-      let result = '';
-      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-      for (let i = 0; i < length; i++) {
-        result += chars.charAt(Math.floor(Math.random() * chars.length));
+    async function fetchKeys() {
+      try {
+        const res = await fetch(`${API_URL}/keys`);
+        const keys = await res.json();
+        const list = document.getElementById("keyList");
+        list.innerHTML = "";
+
+        keys.forEach(k => {
+          const tr = document.createElement("tr");
+          tr.className = "border-b hover:bg-gray-50";
+
+          let statusClass = k.data.used ? "text-red-500" : "text-green-500";
+          let statusText = k.data.used ? "Used" : "Unused";
+          let username = k.data.used ? k.data.used_by.username : "-";
+          let machineId = k.data.used ? k.data.used_by.machine_id : "-";
+          let activatedAt = k.data.used ? new Date(k.data.used_by.activated_at).toLocaleString() : "-";
+
+          tr.innerHTML = `
+            <td class="p-3">${k.key}</td>
+            <td class="p-3">${k.data.plugin_name || "-"}</td>
+            <td class="p-3">${username}</td>
+            <td class="p-3">${machineId}</td>
+            <td class="p-3">${activatedAt}</td>
+            <td class="p-3 ${statusClass}">${statusText}</td>
+          `;
+
+          list.appendChild(tr);
+        });
+      } catch (err) {
+        console.error("Error fetching keys:", err);
       }
-      return result;
     }
 
     async function generateKey() {
@@ -60,13 +90,13 @@
       const expiryDate = document.getElementById("expiryDate").value;
       const username = document.getElementById("username").value;
 
-      if (!pluginName || !expiryDate) {
+      if (!pluginName || !expiryDate || !username) {
         alert("Please fill all fields.");
         return;
       }
 
-      const key = generateRandomKey(12); // توليد كود عشوائي بطول 12 حرف
-      const expiresAt = `${expiryDate}T23:59:59Z`; // إضافة وقت افتراضي
+      const key = generateRandomKey(12); // توليد كود بطول 12 حرف
+      const expiresAt = `${expiryDate}T23:59:59Z`;
 
       try {
         const response = await fetch(`${API_URL}/add-key`, {
@@ -75,7 +105,13 @@
           body: JSON.stringify({
             key,
             plugin_name: pluginName,
-            expires_at: expiresAt
+            expires_at: expiresAt,
+            used: false,
+            used_by: {
+              username,
+              machine_id: "manual-entry", // يمكنك تعديله لاحقًا
+              activated_at: null
+            }
           })
         });
 
@@ -91,39 +127,13 @@
       }
     }
 
-    async function fetchKeys() {
-      try {
-        const res = await fetch(`${API_URL}/keys`);
-        const keys = await res.json();
-        const list = document.getElementById("keyList");
-        list.innerHTML = "";
-
-        keys.forEach(k => {
-          const li = document.createElement("li");
-          li.className = "p-4 border rounded-lg flex justify-between items-center";
-
-          if (k.data.used) {
-            li.innerHTML = `
-              <div>
-                <strong class="text-red-500">${k.key}</strong><br/>
-                <small>Used by <em>${k.data.used_by.username}</em> on ${k.data.used_by.machine_id}</small><br/>
-                <span class="text-xs text-gray-500">Activated at: ${new Date(k.data.used_by.activated_at).toLocaleString()}</span>
-              </div>
-            `;
-          } else {
-            li.innerHTML = `
-              <div>
-                <strong>${k.key}</strong><br/>
-                <small class="text-green-500">Unused</small>
-              </div>
-            `;
-          }
-
-          list.appendChild(li);
-        });
-      } catch (err) {
-        console.error("Error fetching keys:", err);
+    function generateRandomKey(length = 12) {
+      let result = '';
+      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+      for (let i = 0; i < length; i++) {
+        result += chars.charAt(Math.floor(Math.random() * chars.length));
       }
+      return result;
     }
 
     fetchKeys();
