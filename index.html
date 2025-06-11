@@ -9,18 +9,28 @@
 <body class="bg-gray-100 text-gray-900">
 
   <div class="max-w-6xl mx-auto p-6">
-    <h1 class="text-3xl font-bold mb-6 text-center">🔑 License Key Manager</h1>
+    <h1 class="text-3xl font-bold mb-6 text-center">🔑 License Key Generator</h1>
 
     <!-- Form to Add New Key -->
     <div class="bg-white shadow-md rounded-lg p-6 mb-8">
       <h2 class="text-xl font-semibold mb-4">Generate New License Key</h2>
       <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
         <input id="pluginName" placeholder="Plugin Name (e.g. Bbox)" class="border p-2 rounded" />
-        <input id="expiryDate" type="datetime-local" class="border p-2 rounded" />
+
+        <!-- تاريخ بدون الوقت -->
+        <input id="expiryDate" type="date" class="border p-2 rounded" />
+
+        <!-- زر التوليد -->
         <button onclick="generateKey()" class="bg-blue-500 hover:bg-blue-600 text-white p-2 rounded">
           Generate Key
         </button>
       </div>
+
+      <!-- حقل اسم المستخدم -->
+      <label class="block mt-4">
+        <span class="font-medium">User:</span>
+        <input id="username" value="admin" readonly class="border p-2 rounded w-full bg-gray-100" />
+      </label>
     </div>
 
     <!-- Keys List -->
@@ -34,6 +44,52 @@
 
   <script>
     const API_URL = "https://license-server.amensakrx.workers.dev"; 
+
+    // توليد كود عشوائي
+    function generateRandomKey(length = 16) {
+      let result = '';
+      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+      for (let i = 0; i < length; i++) {
+        result += chars.charAt(Math.floor(Math.random() * chars.length));
+      }
+      return result;
+    }
+
+    async function generateKey() {
+      const pluginName = document.getElementById("pluginName").value;
+      const expiryDate = document.getElementById("expiryDate").value;
+      const username = document.getElementById("username").value;
+
+      if (!pluginName || !expiryDate) {
+        alert("Please fill all fields.");
+        return;
+      }
+
+      const key = generateRandomKey(12); // توليد كود عشوائي بطول 12 حرف
+      const expiresAt = `${expiryDate}T23:59:59Z`; // إضافة وقت افتراضي
+
+      try {
+        const response = await fetch(`${API_URL}/add-key`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            key,
+            plugin_name: pluginName,
+            expires_at: expiresAt
+          })
+        });
+
+        if (response.ok) {
+          alert(`Key Generated: ${key}`);
+          fetchKeys();
+        } else {
+          alert("Failed to add key.");
+        }
+      } catch (err) {
+        console.error("Error adding key:", err);
+        alert("Error adding key.");
+      }
+    }
 
     async function fetchKeys() {
       try {
@@ -67,41 +123,6 @@
         });
       } catch (err) {
         console.error("Error fetching keys:", err);
-      }
-    }
-
-    async function generateKey() {
-      const pluginName = document.getElementById("pluginName").value;
-      const expiryDate = document.getElementById("expiryDate").value;
-
-      if (!pluginName || !expiryDate) {
-        alert("Please fill all fields.");
-        return;
-      }
-
-      const key = Math.random().toString(36).substring(2, 15) +
-                  Math.random().toString(36).substring(2, 15);
-
-      try {
-        const response = await fetch(`${API_URL}/add-key`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            key,
-            plugin_name: pluginName,
-            expires_at: expiryDate + ":00Z"
-          })
-        });
-
-        if (response.ok) {
-          alert(`Key Generated: ${key}`);
-          fetchKeys();
-        } else {
-          alert("Failed to add key.");
-        }
-      } catch (err) {
-        console.error("Error adding key:", err);
-        alert("Error adding key.");
       }
     }
 
