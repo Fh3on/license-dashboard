@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>License Manager</title>
+  <style>
+    body { font-family: Arial; padding: 20px; }
+    input, button { margin: 5px 0; }
+    ul { list-style: none; padding-left: 0; }
+    li { margin-bottom: 10px; }
+  </style>
+</head>
+<body>
+  <h1>License Key Manager</h1>
+
+  <input type="text" id="pluginName" placeholder="Plugin Name (e.g. Bbox)" />
+  <input type="datetime-local" id="expiryDate" />
+  <button onclick="generateKey()">Generate License Key</button>
+  <hr />
+
+  <h2>License Keys</h2>
+  <ul id="keyList"></ul>
+
+  <script>
+    const API_URL = "https://license-server.amensakrx.workers.dev"; 
+
+    async function fetchKeys() {
+      try {
+        const res = await fetch(`${API_URL}/keys`);
+        const keys = await res.json();
+        const list = document.getElementById("keyList");
+        list.innerHTML = "";
+
+        keys.forEach(k => {
+          const li = document.createElement("li");
+          if (k.data.used) {
+            li.innerHTML = `<strong>${k.key}</strong> → Used by <em>${k.data.used_by.username}</em> on <code>${k.data.used_by.machine_id}</code>`;
+          } else {
+            li.innerHTML = `<strong>${k.key}</strong> → <span style="color:green">Unused</span>`;
+          }
+          list.appendChild(li);
+        });
+      } catch (err) {
+        console.error("Error fetching keys:", err);
+      }
+    }
+
+    async function generateKey() {
+      const pluginName = document.getElementById("pluginName").value;
+      const expiryDate = document.getElementById("expiryDate").value;
+
+      if (!pluginName || !expiryDate) {
+        alert("Please fill all fields.");
+        return;
+      }
+
+      const key = Math.random().toString(36).substring(2, 15) +
+                  Math.random().toString(36).substring(2, 15);
+
+      try {
+        const response = await fetch(`${API_URL}/add-key`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            key,
+            plugin_name: pluginName,
+            expires_at: expiryDate + ":00Z"
+          })
+        });
+
+        if (response.ok) {
+          alert(`Key Generated: ${key}`);
+          fetchKeys();
+        } else {
+          alert("Failed to add key.");
+        }
+      } catch (err) {
+        console.error("Error adding key:", err);
+        alert("Error adding key.");
+      }
+    }
+
+    fetchKeys();
+    setInterval(fetchKeys, 10000);
+  </script>
+</body>
+</html>
