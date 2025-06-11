@@ -9,23 +9,18 @@
 <body class="bg-gray-100 text-gray-900">
 
   <div class="max-w-6xl mx-auto p-6">
-    <h1 class="text-3xl font-bold mb-6 text-center">🔑 License Key Manager</h1>
+    <h1 class="text-3xl font-bold mb-6 text-center">🔑 License Key Generator</h1>
 
     <!-- Form to Add New Key -->
     <div class="bg-white shadow-md rounded-lg p-6 mb-8">
       <h2 class="text-xl font-semibold mb-4">Generate New License Key</h2>
       <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+        <input id="minecraftUsername" placeholder="Minecraft Username (e.g. Notch)" class="border p-2 rounded" />
         <input id="pluginName" placeholder="Plugin Name (e.g. Bbox)" class="border p-2 rounded" />
-        <input id="expiryDate" type="date" class="border p-2 rounded" />
         <button onclick="generateKey()" class="bg-blue-500 hover:bg-blue-600 text-white p-2 rounded">
           Generate Key
         </button>
       </div>
-
-      <label class="block mt-4">
-        <span class="font-medium">User:</span>
-        <input id="username" value="admin" class="border p-2 rounded w-full bg-gray-100" />
-      </label>
     </div>
 
     <!-- Keys List -->
@@ -86,17 +81,16 @@
     }
 
     async function generateKey() {
-      const pluginName = document.getElementById("pluginName").value;
-      const expiryDate = document.getElementById("expiryDate").value;
-      const username = document.getElementById("username").value;
+      const username = document.getElementById("minecraftUsername").value.trim();
+      const pluginName = document.getElementById("pluginName").value.trim();
 
-      if (!pluginName || !expiryDate || !username) {
+      if (!username || !pluginName) {
         alert("Please fill all fields.");
         return;
       }
 
-      const key = generateRandomKey(12); // توليد كود بطول 12 حرف
-      const expiresAt = `${expiryDate}T23:59:59Z`;
+      const key = generateRandomKey(16); // توليد كود فريد
+      const expiresAt = "2025-12-31T23:59:59Z"; // يمكنك جعل هذا قابلًا للتغيير لاحقًا
 
       try {
         const response = await fetch(`${API_URL}/add-key`, {
@@ -109,14 +103,14 @@
             used: false,
             used_by: {
               username,
-              machine_id: "manual-entry", // يمكنك تعديله لاحقًا
+              machine_id: null, // سيتم تحديده عند التفعيل فقط
               activated_at: null
             }
           })
         });
 
         if (response.ok) {
-          alert(`Key Generated: ${key}`);
+          alert(`Key Generated for ${username}: ${key}`);
           fetchKeys();
         } else {
           alert("Failed to add key.");
@@ -127,7 +121,7 @@
       }
     }
 
-    function generateRandomKey(length = 12) {
+    function generateRandomKey(length = 16) {
       let result = '';
       const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
       for (let i = 0; i < length; i++) {
