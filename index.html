@@ -93,14 +93,14 @@
     async function generateKey() {
       const username = document.getElementById("minecraftUsername").value.trim();
       const expiryDate = document.getElementById("expiryDate").value;
+      const pluginName = document.getElementById("pluginName").value.trim();
 
-      if (!username || !expiryDate) {
+      if (!username || !expiryDate || !pluginName) {
         alert("Please fill all fields.");
         return;
       }
 
-      const pluginName = document.getElementById("pluginName").value.trim();
-      const key = generateRandomKey(16); // توليد كود بطول 16 حرف
+      const key = generateRandomKey(12); // توليد كود بطول 12 حرف
       const expiresAt = `${expiryDate}T23:59:59Z`;
 
       try {
@@ -112,27 +112,25 @@
             plugin_name: pluginName,
             expires_at: expiresAt,
             used: false,
-            used_by: {
-              username,
-              machine_id: null,
-              activated_at: null
-            }
+            username
           })
         });
 
         if (response.ok) {
-          alert(`Key Generated for ${username}: ${key}`);
+          const result = await response.json();
+          alert(`Key Generated for ${username}: ${result.key}`);
           fetchKeys();
         } else {
-          alert("Failed to add key.");
+          const error = await response.json();
+          alert("Failed to add key:\n" + (error.message || "Unknown error"));
         }
       } catch (err) {
         console.error("Error adding key:", err);
-        alert("Error adding key.");
+        alert("Error adding key. Check console for details.");
       }
     }
 
-    function generateRandomKey(length = 16) {
+    function generateRandomKey(length = 12) {
       let result = '';
       const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
       for (let i = 0; i < length; i++) {
