@@ -2,7 +2,6 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>License Manager</title>
   <script src="https://cdn.tailwindcss.com"></script> 
 </head>
@@ -22,11 +21,11 @@
 
       <div class="mb-4">
         <label class="block font-medium mb-2">Minecraft Username</label>
-        <input id="minecraftUsername" placeholder="Enter Minecraft username (e.g. Notch)" class="border p-2 rounded w-full" />
+        <input id="minecraftUsername" placeholder="Enter Minecraft username" class="border p-2 rounded w-full" />
       </div>
 
       <div class="mb-4">
-        <label class="block font-medium mb-2">License Expiry Date</label>
+        <label class="block font-medium mb-2">Expiry Date</label>
         <input id="expiryDate" type="date" class="border p-2 rounded w-full" />
       </div>
 
@@ -38,7 +37,7 @@
     <!-- Keys List -->
     <div class="bg-white shadow-md rounded-lg p-6">
       <h2 class="text-xl font-semibold mb-4">License Keys</h2>
-      <table class="min-w-full bg-white border-collapse">
+      <table class="min-w-full border-collapse">
         <thead>
           <tr class="bg-gray-200 text-left">
             <th class="p-3">License Key</th>
@@ -46,6 +45,7 @@
             <th class="p-3">Machine ID</th>
             <th class="p-3">Activated At</th>
             <th class="p-3">Status</th>
+            <th class="p-3">Actions</th>
           </tr>
         </thead>
         <tbody id="keyList">
@@ -56,11 +56,11 @@
   </div>
 
   <script>
-    const API_URL = "https://license-server.amensakrx.workers.dev"; 
+    const API_URL = "https://your-license-server.<your-subdomain>.workers.dev"; 
 
     async function fetchKeys() {
       try {
-        const res = await fetch(`${API_URL}/keys`);
+        const res = await fetch(`${API_URL}/keys`, { mode: 'cors' });
         const keys = await res.json();
         const list = document.getElementById("keyList");
         list.innerHTML = "";
@@ -81,26 +81,28 @@
             <td class="p-3">${machineId}</td>
             <td class="p-3">${activatedAt}</td>
             <td class="p-3 ${statusClass}">${statusText}</td>
+            <td class="p-3">
+              ${k.data.used ? `<button onclick='deactivateKey("${k.key}")' class="bg-red-500 hover:bg-red-600 text-white p-1 rounded text-xs">Deactivate</button>` : "-"}
+            </td>
           `;
-
           list.appendChild(tr);
         });
       } catch (err) {
         console.error("Error fetching keys:", err);
+        alert("Error fetching keys. Check console.");
       }
     }
 
     async function generateKey() {
       const username = document.getElementById("minecraftUsername").value.trim();
       const expiryDate = document.getElementById("expiryDate").value;
-      const pluginName = document.getElementById("pluginName").value.trim();
 
-      if (!username || !expiryDate || !pluginName) {
+      if (!username || !expiryDate) {
         alert("Please fill all fields.");
         return;
       }
 
-      const key = generateRandomKey(12); // توليد كود بطول 12 حرف
+      const key = generateRandomKey(12);
       const expiresAt = `${expiryDate}T23:59:59Z`;
 
       try {
@@ -109,9 +111,8 @@
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             key,
-            plugin_name: pluginName,
+            plugin_name: "Bbox",
             expires_at: expiresAt,
-            used: false,
             username
           })
         });
@@ -137,6 +138,37 @@
         result += chars.charAt(Math.floor(Math.random() * chars.length));
       }
       return result;
+    }
+
+    function copyKey(key) {
+      navigator.clipboard.writeText(key).then(() => {
+        alert("License key copied to clipboard: " + key);
+      }).catch(() => {
+        prompt("Failed to copy, press Ctrl+C", key);
+      });
+    }
+
+    async function deactivateKey(key) {
+      if (!confirm("Are you sure you want to deactivate this key?")) return;
+
+      try {
+        const response = await fetch(`${API_URL}/deactivate`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ key })
+        });
+
+        if (response.ok) {
+          alert("Key deactivated successfully!");
+          fetchKeys();
+        } else {
+          const error = await response.json();
+          alert("Failed to deactivate key:\n" + (error.message || "Unknown error"));
+        }
+      } catch (err) {
+        console.error("Error deactivating key:", err);
+        alert("Error deactivating key. Check console.");
+      }
     }
 
     fetchKeys();
